@@ -1,0 +1,14 @@
+version: '3.8'
+services: 
+  nestjs-api-tutorial-db:
+    image: postgres:13
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: nestjs-api-tutorial-db
+    networks:
+      - dev-network
+networks:
+  dev-network:
