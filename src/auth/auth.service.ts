@@ -6,15 +6,49 @@ import { PrismaService } from 'src/prisma/prisma.service';
 import { AuthDTO } from './dto';
 import * as argon from 'argon2';
 import { PrismaClientKnownRequestError } from '@prisma/client/runtime/library';
+import { JwtService } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class AuthService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private jwt: JwtService,
+    private config: ConfigService,
+  ) {}
 
-  signin() {
-    return {
-      message: 'Login success',
-    };
+  async signin(dto: AuthDTO) {
+    //Find user by email
+    const user =
+      await this.prisma.user.findUnique({
+        where: {
+          email: dto.email,
+        },
+      });
+
+    //If user not exist throw error
+    if (!user) {
+      throw new ForbiddenException(
+        'Email ou senha incorretos',
+      );
+    }
+
+    //Compare pasword
+    const match = await argon.verify(
+      user.hash,
+      dto.hash,
+    );
+
+    //Throw error if not match
+    if (!match) {
+      throw new ForbiddenException(
+        'Email ou senha incorretos',
+      );
+    }
+
+    //Send back the user
+    delete user.hash;
+    return this.signToken(user.id, user.email);
   }
 
   async signup(dto: AuthDTO) {
@@ -40,10 +74,30 @@ export class AuthService {
         PrismaClientKnownRequestError
       ) {
         throw new ForbiddenException(
-          'Email already exists',
+          'Email já cadastrado',
         );
       }
       throw new Error('Internal server error');
     }
+  }
+
+  async signToken(
+    userId: number,
+    email: string,
+  ): Promise<{ token: string }> {
+    const payload = {
+      sub: userId,
+      email,
+    };
+
+    const secret = this.config.get('JWT_SECRET');
+    const token = await this.jwt.sign(payload, {
+      expiresIn: '60m',
+      secret: secret,
+    });
+
+    return {
+      token: token,
+    };
   }
 }
