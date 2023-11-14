@@ -17,11 +17,16 @@ import { useMutation } from "@tanstack/react-query";
 
 const createUserFormSchema = z
   .object({
-    firstName: z.string(),
-    lastName: z.string(),
-    email: z.string().email(),
-    hash: z.string(),
-    confirmPassword: z.string(),
+    firstName: z.string().min(1, { message: "Nome é obrigatório" }),
+    lastName: z.string().min(1, { message: "Sobrenome é obrigatório" }),
+    email: z
+      .string()
+      .email("Insira um email válido")
+      .min(1, { message: "Email é obrigatório" }),
+    hash: z.string().min(1, { message: "Senha é obrigatório" }),
+    confirmPassword: z
+      .string()
+      .min(1, { message: "Confirmar senha é obrigatório" }),
   })
   .refine((data) => data.hash === data.confirmPassword, {
     message: "As senhas não coincidem",
@@ -41,7 +46,8 @@ const Register = () => {
     mutationFn: (data: createUserFormData) => API.post("/auth/signup", data),
     onSuccess: (data) => {
       console.log(data);
-      // navigate("/login");
+      localStorage.setItem("token", data.data.token);
+      navigate("/login");
     },
     onError: (error) => {
       console.log(error);
