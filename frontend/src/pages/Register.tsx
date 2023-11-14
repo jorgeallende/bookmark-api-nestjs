@@ -11,8 +11,9 @@ import {
   FormMessage,
 } from "../components/ui/form";
 import { Input } from "../components/ui/input";
-import { SignUp } from "../api/auth";
 import { useNavigate } from "react-router-dom";
+import { API } from "../api";
+import { useMutation } from "@tanstack/react-query";
 
 const createUserFormSchema = z
   .object({
@@ -30,20 +31,25 @@ const createUserFormSchema = z
 export type createUserFormData = z.infer<typeof createUserFormSchema>;
 
 const Register = () => {
+  const navigate = useNavigate();
   const form = useForm<createUserFormData>({
     resolver: zodResolver(createUserFormSchema),
   });
 
-  const navigate = useNavigate();
+  const registerUser = useMutation({
+    mutationKey: ["registerUser"],
+    mutationFn: (data: createUserFormData) => API.post("/auth/signup", data),
+    onSuccess: (data) => {
+      console.log(data);
+      // navigate("/login");
+    },
+    onError: (error) => {
+      console.log(error);
+    },
+  });
 
   const onSubmit = async (values: createUserFormData) => {
-    const response = await SignUp(values);
-    if (response?.status != 201) {
-      console.log("Erro: ", response?.data.message);
-    } else {
-      alert("Usuário cadastrado com sucesso!");
-      navigate("/login");
-    }
+    registerUser.mutate(values);
   };
 
   return (

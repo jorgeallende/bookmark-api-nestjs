@@ -2,7 +2,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
-import { LoginAuth } from "../api/auth";
 import { Button } from "../components/ui/button";
 import {
   Form,
@@ -13,6 +12,8 @@ import {
   FormMessage,
 } from "../components/ui/form";
 import { Input } from "../components/ui/input";
+import { useMutation } from "@tanstack/react-query";
+import { API } from "../api";
 
 const loginFormSchema = z.object({
   email: z.string().email(),
@@ -22,21 +23,25 @@ const loginFormSchema = z.object({
 export type loginFormData = z.infer<typeof loginFormSchema>;
 
 const Login = () => {
+  const navigate = useNavigate();
   const form = useForm<loginFormData>({
     resolver: zodResolver(loginFormSchema),
   });
 
-  const navigate = useNavigate();
+  const loginAuth = useMutation({
+    mutationKey: ["loginAuth"],
+    mutationFn: (data: loginFormData) => API.post("/auth/signin", data),
+    onSuccess: (data) => {
+      console.log(data);
+      navigate("/dashboard");
+    },
+    onError: (error) => {
+      console.log(error);
+    },
+  });
 
   const onSubmit = async (values: loginFormData) => {
-    const response = await LoginAuth(values);
-    if (response?.status != 200) {
-      console.log("Erro: ", response?.data.message);
-    } else {
-      console.log(response.data.token);
-      alert("Usuário logado com sucesso!");
-      navigate("/login");
-    }
+    loginAuth.mutate(values);
   };
 
   return (
